@@ -1,0 +1,516 @@
+{
+    "auth": {
+        "username": "admin",
+        "password": "123"
+    },
+    "teacher_info": {
+        "teacher_name": "",
+        "rank": "",
+        "school_name": "",
+        "directorate": ""
+    },
+    "settings": {
+        "years": [
+            "2023-2024",
+            "2024-2025",
+            "2025-2026"
+        ],
+        "selected_year": "2025-2026",
+        "subjects": [
+            "العلوم الفيزيائية",
+            "الرياضيات",
+            "علوم الطبيعة والحياة",
+            "المعلوماتية"
+        ],
+        "selected_subject": "المعلوماتية"
+    },
+    "classes": {
+        "1م1": [
+            {
+                "id": 1,
+                "lname": "الهادي",
+                "fname": "خديجة",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 2,
+                "lname": "بسدات",
+                "fname": "محمد بن يحي",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 3,
+                "lname": "بن محجوبة",
+                "fname": "طيب",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 4,
+                "lname": "جواف",
+                "fname": "يوسف زكرياء",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 5,
+                "lname": "حفيفة",
+                "fname": "ايوب بلحاج",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 6,
+                "lname": "دماني",
+                "fname": "بشرى",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 7,
+                "lname": "ذيب",
+                "fname": "هاجر",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 8,
+                "lname": "زرقة",
+                "fname": "فتيحة",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 9,
+                "lname": "زريعة",
+                "fname": "بن عزوز رامي",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 10,
+                "lname": "زكراوي",
+                "fname": "ابراهيم",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 11,
+                "lname": "زكراوي",
+                "fname": "احمد عيسى",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 12,
+                "lname": "زكراوي",
+                "fname": "عبدالقادر",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 13,
+                "lname": "زكراوي",
+                "fname": "قدور",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 14,
+                "lname": "زكراوي",
+                "fname": "محمد عبد الله",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 15,
+                "lname": "زيرق",
+                "fname": "ريهام رميسة",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 16,
+                "lname": "سبع",
+                "fname": "العيد",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 17,
+                "lname": "سعدي",
+                "fname": "نجود هبة الله",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 18,
+                "lname": "شوشة",
+                "fname": "إلهام",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 19,
+                "lname": "صباح",
+                "fname": "عبد اللطيف",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 20,
+                "lname": "ضيفي",
+                "fname": "اسماعيل",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 21,
+                "lname": "ضيفي",
+                "fname": "رانيا فريحة",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 22,
+                "lname": "ضيفي",
+                "fname": "يوسف",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 23,
+                "lname": "طاوسي",
+                "fname": "إبراهيم الخليل",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 24,
+                "lname": "طاوسي",
+                "fname": "مارية",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 25,
+                "lname": "عبداللاوي",
+                "fname": "يونس",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 26,
+                "lname": "عروي",
+                "fname": "إيمان نادية",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 27,
+                "lname": "غربي",
+                "fname": "أشواق رتاج",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 28,
+                "lname": "قاسم",
+                "fname": "أمال",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 29,
+                "lname": "قرارة",
+                "fname": "فاطمة الزهراء إلهام",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 30,
+                "lname": "قرارة",
+                "fname": "يونس",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 31,
+                "lname": "قرشي",
+                "fname": "كمال",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 32,
+                "lname": "قرشي",
+                "fname": "نورة",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 33,
+                "lname": "قريقة",
+                "fname": "الزاوي",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 34,
+                "lname": "قريقة",
+                "fname": "سهيلة",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 35,
+                "lname": "قريقة",
+                "fname": "مسعود",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 36,
+                "lname": "كعناف",
+                "fname": "ياسمين",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 37,
+                "lname": "لملومة",
+                "fname": "عبد الرؤوف",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 38,
+                "lname": "لويبدة",
+                "fname": "طارق بن زياد",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 39,
+                "lname": "معيزة",
+                "fname": "رهف",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 40,
+                "lname": "مليلة",
+                "fname": "أسامة",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 41,
+                "lname": "مليلة",
+                "fname": "وئام",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 42,
+                "lname": "نور الدين",
+                "fname": "إلياس العربي",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 43,
+                "lname": "هادي",
+                "fname": "صفاء",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            },
+            {
+                "id": 44,
+                "lname": "هزيل",
+                "fname": "فاطمة الزهراء",
+                "gender": "ذكر",
+                "group": "الفوج 1",
+                "eval": 10.0,
+                "exam1": 0.0,
+                "exam2": 0.0,
+                "deductions": 0.0
+            }
+        ],
+        "1م2": []
+    }
+}
