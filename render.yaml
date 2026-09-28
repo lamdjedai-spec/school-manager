@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: school-manager
+    env: python
+    region: frankfurt # أو اختر المنطقة التي تناسبك
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
