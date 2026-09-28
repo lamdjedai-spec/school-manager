@@ -580,8 +580,11 @@ def add_class():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
     c_name = request.form.get("class_name", "").strip()
-    if c_name and c_name not in teacher_info["classes"]:
-        teacher_info["classes"].append(c_name)
+# التأكد من أن القاموس يحتوي على مفتاح classes أو تهعيشته إن لم يكن موجوداً
+if "classes" not in teacher_info:
+    teacher_info["classes"] = []
+
+if c_name and c_name not in teacher_info["classes"]:        teacher_info["classes"].append(c_name)
         if c_name not in students_db:
             students_db[c_name] = []
         save_data()
