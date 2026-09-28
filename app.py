@@ -104,18 +104,16 @@ def process_student_grid(data, n_sessions):
         continuous_eval_list.append(eval_score)
         
         devoir_marks = row["devoir"]
-        # التحقق مما إذا تم اختيار تقييمات صالحة لكل الحصص (وليست فارغة أو افتراضية فارغة)
         if len(devoir_marks) == n_sessions and all(m in DEVOIR_MAP for m in devoir_marks):
             max_per_session = 20.0 / n_sessions
             dev_score = round(sum(DEVOIR_MAP[m] * max_per_session for m in devoir_marks), 2)
         else:
-            dev_score = 0.0  # افتراضياً يصبح صفر إذا لم تكتمل أو لم تُختر
+            dev_score = 0.0  
             
         devoir_total_list.append(dev_score)
         
         exam_score = row["exam"]
         if exam_score is not None:
-            # المعدل يُحسب دائماً بناءً على التقويم المستمر، مجموع الفرض، والاختبار
             avg = round((((eval_score + dev_score) / 2.0) + (exam_score * 2.0)) / 3.0, 2)
             final_avg_list.append(avg)
         else:
@@ -580,17 +578,19 @@ def add_class():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
     c_name = request.form.get("class_name", "").strip()
-# التأكد من أن القاموس يحتوي على مفتاح classes أو تهعيشته إن لم يكن موجوداً
-if "classes" not in teacher_info:
-    teacher_info["classes"] = []
+    
+    if "classes" not in teacher_info:
+        teacher_info["classes"] = []
 
-if c_name and c_name not in teacher_info["classes"]:        teacher_info["classes"].append(c_name)
+    if c_name and c_name not in teacher_info["classes"]:
+        teacher_info["classes"].append(c_name)
         if c_name not in students_db:
             students_db[c_name] = []
         save_data()
         flash(f"تم إضافة القسم '{c_name}' بنجاح!", "success")
     else:
         flash("اسم القسم فارغ أو موجود مسبقاً!", "error")
+        
     return redirect(url_for("dashboard"))
 
 @app.route("/delete_class/<class_name>")
@@ -640,7 +640,7 @@ def add_student(class_name):
             "gender": gender,
             "pc": pc,
             "deductions": {crit: 0 for crit in CRITERIA_INFO},
-            "devoir": [""] * teacher_info["sessions_count"], # تبدأ فارغة لتكون 0
+            "devoir": [""] * teacher_info["sessions_count"],
             "exam": 10.0
         }
         if class_name not in students_db:
@@ -672,7 +672,7 @@ def batch_add_students(class_name):
                         "gender": "ذكر",
                         "pc": added_count + 1,
                         "deductions": {crit: 0 for crit in CRITERIA_INFO},
-                        "devoir": [""] * teacher_info["sessions_count"], # تبدأ فارغة لتكون 0
+                        "devoir": [""] * teacher_info["sessions_count"],
                         "exam": 10.0
                     }
                     if class_name not in students_db:
