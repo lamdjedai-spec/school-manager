@@ -801,9 +801,9 @@ def export_all_excel():
             used_sheet_names = set()
             classes_list = teacher_info.get("classes", [])
             
-            # إذا لم تكن هناك أقسام، أنشئ ورقة فارغة لتجنب الانهيار
+            # ضمان وجود ورقة عمل واحدة على الأقل لمنع خطأ At least one sheet must be visible
             if not classes_list:
-                df_empty = pd.DataFrame({"ملاحظة": ["لا توجد أقسام مسجلة حالياً"]})
+                df_empty = pd.DataFrame({"تنبيه": ["لا توجد أقسام مسجلة حالياً للتصدير"]})
                 df_empty.to_excel(writer, sheet_title="عام", index=False)
             else:
                 for class_name in classes_list:
