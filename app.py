@@ -5,6 +5,7 @@ import io
 import json
 import os
 import re
+import openpyxl
 
 app = Flask(__name__)
 app.secret_key = "teacher_secret_key_2026"
@@ -796,58 +797,74 @@ def export_all_excel():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
     try:
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        wb = openpyxl.Workbook()
+        default_sheet = wb.active
+        
+        classes_list = teacher_info.get("classes", [])
+        
+        if not classes_list:
+            default_sheet.title = "عام"
+            default_sheet.cell(row=1, column=1, value="لا توجد أقسام مسجلة حالياً للتصدير")
+        else:
+            first_sheet = True
             used_sheet_names = set()
-            classes_list = teacher_info.get("classes", [])
-            
-            # ضمان وجود ورقة عمل واحدة على الأقل لمنع خطأ At least one sheet must be visible
-            if not classes_list:
-                df_empty = pd.DataFrame({"تنبيه": ["لا توجد أقسام مسجلة حالياً للتصدير"]})
-                df_empty.to_excel(writer, sheet_title="عام", index=False)
-            else:
-                for class_name in classes_list:
-                    data = students_db.get(class_name, [])
-                    processed_students, _ = process_student_grid(data, teacher_info["sessions_count"])
-                    rows = []
-                    for idx, st in enumerate(processed_students, start=1):
-                        rows.append({
-                            "الرقم": idx,
-                            "اللقب": st.get("surname", ""),
-                            "الاسم": st.get("name", ""),
-                            "الجنس": st.get("gender", ""),
-                            "الفوج": f"فوج {st.get('group', 1)}",
-                            "رقم الجهاز": st.get("pc", 1),
-                            "مجموع التقويم المستمر": st.get("continuous_eval", 0),
-                            "مجموع الفرض": st.get("devoir_total", 0),
-                            "الاختبار": st.get("exam", 10.0),
-                            "المعدل النهائي": st["final_avg"] if st.get("final_avg") is not None else "--"
-                        })
-                    
-                    df_class = pd.DataFrame(rows)
-                    if df_class.empty:
-                        df_class = pd.DataFrame({"رسالة": ["لا يوجد تلاميذ في هذا القسم"]})
-                    
-                    clean_name = re.sub(r'[\/\\\?\*\[\]\:]', '_', str(class_name)).strip()
-                    sheet_title = clean_name[:30] if clean_name else "قسم"
-                    
-                    base_title = sheet_title
-                    counter = 1
-                    while sheet_title in used_sheet_names:
-                        suffix = f"_{counter}"
-                        sheet_title = base_title[:30 - len(suffix)] + suffix
-                        counter += 1
-                    used_sheet_names.add(sheet_title)
+            for class_name in classes_list:
+                data = students_db.get(class_name, [])
+                processed_students, _ = process_student_grid(data, teacher_info["sessions_count"])
+                
+                rows = []
+                for idx, st in enumerate(processed_students, start=1):
+                    rows.append({
+                        "الرقم": idx,
+                        "اللقب": st.get("surname", ""),
+                        "الاسم": st.get("name", ""),
+                        "الجنس": st.get("gender", ""),
+                        "الفوج": f"فوج {st.get('group', 1)}",
+                        "رقم الجهاز": st.get("pc", 1),
+                        "مجموع التقويم المستمر": st.get("continuous_eval", 0),
+                        "مجموع الفرض": st.get("devoir_total", 0),
+                        "الاختبار": st.get("exam", 10.0),
+                        "المعدل النهائي": st["final_avg"] if st.get("final_avg") is not None else "--"
+                    })
+                
+                df_class = pd.DataFrame(rows)
+                if df_class.empty:
+                    df_class = pd.DataFrame({"رسالة": ["لا يوجد تلاميذ في هذا القسم"]})
+                
+                clean_name = re.sub(r'[\/\\\?\*\[\]\:]', '_', str(class_name)).strip()
+                sheet_title = clean_name[:30] if clean_name else "قسم"
+                
+                base_title = sheet_title
+                counter = 1
+                while sheet_title in used_sheet_names:
+                    suffix = f"_{counter}"
+                    sheet_title = base_title[:30 - len(suffix)] + suffix
+                    counter += 1
+                used_sheet_names.add(sheet_title)
+                
+                if first_sheet:
+                    ws = default_sheet
+                    ws.title = sheet_title
+                    first_sheet = False
+                else:
+                    ws = wb.create_sheet(title=sheet_title)
+                
+                headers = list(df_class.columns)
+                ws.append(headers)
+                
+                for row in df_class.itertuples(index=False, name=None):
+                    ws.append(list(row))
+                
+                try:
+                    ws.sheet_view.showGridLines = True
+                    ws.views.sheetView[0].rightToLeft = True
+                except Exception:
+                    pass
 
-                    df_class.to_excel(writer, sheet_title=sheet_title, index=False)
-                    try:
-                        worksheet = writer.sheets[sheet_title]
-                        worksheet.sheet_view.showGridLines = True
-                        worksheet.views.sheetView[0].rightToLeft = True
-                    except Exception:
-                        pass
-
+        output = io.BytesIO()
+        wb.save(output)
         output.seek(0)
+        
         return send_file(
             output,
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
