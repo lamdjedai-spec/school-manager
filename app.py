@@ -11,9 +11,6 @@ app.secret_key = "teacher_secret_key_2026"
 
 DATA_FILE = "data.json"
 
-# ==========================================
-# 1. قائمة الولايات وقواعد البيانات
-# ==========================================
 WILAYAS = [
     "01 - أدرار", "02 - الشلف", "03 - الأغواط", "04 - أم البواقي", "05 - باتنة", 
     "06 - بجاية", "07 - بسكرة", "08 - بشار", "09 - البليدة", "10 - البويرة",
@@ -85,9 +82,6 @@ def save_data():
 
 load_data()
 
-# ==========================================
-# 2. منطق الحسابات عبر Pandas
-# ==========================================
 def process_student_grid(data, n_sessions):
     if not data:
         return [], {}
@@ -107,7 +101,7 @@ def process_student_grid(data, n_sessions):
         eval_score = round(max(0.0, 20.0 - deductions_total), 2)
         continuous_eval_list.append(eval_score)
         
-        devoir_marks = row["devoir"]
+        devoir_marks = row.get("devoir", [])
         if len(devoir_marks) == n_sessions and all(m in DEVOIR_MAP for m in devoir_marks):
             max_per_session = 20.0 / n_sessions
             dev_score = round(sum(DEVOIR_MAP[m] * max_per_session for m in devoir_marks), 2)
@@ -116,7 +110,7 @@ def process_student_grid(data, n_sessions):
             
         devoir_total_list.append(dev_score)
         
-        exam_score = row["exam"]
+        exam_score = row.get("exam")
         if exam_score is not None:
             avg = round((((eval_score + dev_score) / 2.0) + (exam_score * 2.0)) / 3.0, 2)
             final_avg_list.append(avg)
@@ -141,9 +135,6 @@ def process_student_grid(data, n_sessions):
         
     return df.to_dict(orient="records"), analytics
 
-# ==========================================
-# 3. قوالب HTML المدمجة
-# ==========================================
 COMMON_CSS = """
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -520,9 +511,6 @@ CLASS_GRID_HTML = COMMON_CSS + """
 </html>
 """
 
-# ==========================================
-# 4. مسارات تطبيق الـ Flask
-# ==========================================
 @app.route("/", methods=["GET", "POST"])
 def login():
     error = None
@@ -807,53 +795,68 @@ def api_exam(class_name, student_id, val):
 def export_all_excel():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        used_sheet_names = set()
-        for class_name in teacher_info["classes"]:
-            data = students_db.get(class_name, [])
-            processed_students, _ = process_student_grid(data, teacher_info["sessions_count"])
-            rows = []
-            for idx, st in enumerate(processed_students, start=1):
-                rows.append({
-                    "الرقم": idx,
-                    "اللقب": st["surname"],
-                    "الاسم": st["name"],
-                    "الجنس": st["gender"],
-                    "الفوج": f"فوج {st['group']}",
-                    "رقم الجهاز": st["pc"],
-                    "مجموع التقويم المستمر": st["continuous_eval"],
-                    "مجموع الفرض": st["devoir_total"],
-                    "الاختبار": st["exam"],
-                    "المعدل النهائي": st["final_avg"] if st["final_avg"] is not None else "--"
-                })
-            df_class = pd.DataFrame(rows)
+    try:
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            used_sheet_names = set()
+            classes_list = teacher_info.get("classes", [])
             
-            # تنظيف اسم ورقة العمل لتجنب أخطاء إكسل (إزالة الرموز غير المسموحة وطول أقصى 30 حرف)
-            clean_name = re.sub(r'[\/\\\?\*\[\]\:]', '_', class_name).strip()
-            sheet_title = clean_name[:30] if clean_name else "قسم"
-            
-            # منع تكرار أسماء الأوراق
-            base_title = sheet_title
-            counter = 1
-            while sheet_title in used_sheet_names:
-                suffix = f"_{counter}"
-                sheet_title = base_title[:30 - len(suffix)] + suffix
-                counter += 1
-            used_sheet_names.add(sheet_title)
+            # إذا لم تكن هناك أقسام، أنشئ ورقة فارغة لتجنب الانهيار
+            if not classes_list:
+                df_empty = pd.DataFrame({"ملاحظة": ["لا توجد أقسام مسجلة حالياً"]})
+                df_empty.to_excel(writer, sheet_title="عام", index=False)
+            else:
+                for class_name in classes_list:
+                    data = students_db.get(class_name, [])
+                    processed_students, _ = process_student_grid(data, teacher_info["sessions_count"])
+                    rows = []
+                    for idx, st in enumerate(processed_students, start=1):
+                        rows.append({
+                            "الرقم": idx,
+                            "اللقب": st.get("surname", ""),
+                            "الاسم": st.get("name", ""),
+                            "الجنس": st.get("gender", ""),
+                            "الفوج": f"فوج {st.get('group', 1)}",
+                            "رقم الجهاز": st.get("pc", 1),
+                            "مجموع التقويم المستمر": st.get("continuous_eval", 0),
+                            "مجموع الفرض": st.get("devoir_total", 0),
+                            "الاختبار": st.get("exam", 10.0),
+                            "المعدل النهائي": st["final_avg"] if st.get("final_avg") is not None else "--"
+                        })
+                    
+                    df_class = pd.DataFrame(rows)
+                    if df_class.empty:
+                        df_class = pd.DataFrame({"رسالة": ["لا يوجد تلاميذ في هذا القسم"]})
+                    
+                    clean_name = re.sub(r'[\/\\\?\*\[\]\:]', '_', str(class_name)).strip()
+                    sheet_title = clean_name[:30] if clean_name else "قسم"
+                    
+                    base_title = sheet_title
+                    counter = 1
+                    while sheet_title in used_sheet_names:
+                        suffix = f"_{counter}"
+                        sheet_title = base_title[:30 - len(suffix)] + suffix
+                        counter += 1
+                    used_sheet_names.add(sheet_title)
 
-            df_class.to_excel(writer, sheet_title=sheet_title, index=False)
-            worksheet = writer.sheets[sheet_title]
-            worksheet.sheet_view.showGridLines = True
-            worksheet.views.sheetView[0].rightToLeft = True
+                    df_class.to_excel(writer, sheet_title=sheet_title, index=False)
+                    try:
+                        worksheet = writer.sheets[sheet_title]
+                        worksheet.sheet_view.showGridLines = True
+                        worksheet.views.sheetView[0].rightToLeft = True
+                    except Exception:
+                        pass
 
-    output.seek(0)
-    return send_file(
-        output,
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        as_attachment=True,
-        download_name="جميع_أقسام_شبكة_التقويم.xlsx"
-    )
+        output.seek(0)
+        return send_file(
+            output,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name="جميع_أقسام_شبكة_التقويم.xlsx"
+        )
+    except Exception as e:
+        flash(f"حدث خطأ أثناء تصدير الملف: {str(e)}", "error")
+        return redirect(url_for("dashboard"))
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
