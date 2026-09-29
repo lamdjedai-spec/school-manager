@@ -4,6 +4,7 @@ import numpy as np
 import io
 import json
 import os
+import re
 
 app = Flask(__name__)
 app.secret_key = "teacher_secret_key_2026"
@@ -76,8 +77,11 @@ def save_data():
         "teacher_info": teacher_info,
         "students_db": students_db
     }
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+    try:
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print(f"Error saving data: {e}")
 
 load_data()
 
@@ -805,6 +809,7 @@ def export_all_excel():
         return redirect(url_for("login"))
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        used_sheet_names = set()
         for class_name in teacher_info["classes"]:
             data = students_db.get(class_name, [])
             processed_students, _ = process_student_grid(data, teacher_info["sessions_count"])
@@ -823,7 +828,20 @@ def export_all_excel():
                     "المعدل النهائي": st["final_avg"] if st["final_avg"] is not None else "--"
                 })
             df_class = pd.DataFrame(rows)
-            sheet_title = class_name.replace("/", "-")[:30]
+            
+            # تنظيف اسم ورقة العمل لتجنب أخطاء إكسل (إزالة الرموز غير المسموحة وطول أقصى 30 حرف)
+            clean_name = re.sub(r'[\/\\\?\*\[\]\:]', '_', class_name).strip()
+            sheet_title = clean_name[:30] if clean_name else "قسم"
+            
+            # منع تكرار أسماء الأوراق
+            base_title = sheet_title
+            counter = 1
+            while sheet_title in used_sheet_names:
+                suffix = f"_{counter}"
+                sheet_title = base_title[:30 - len(suffix)] + suffix
+                counter += 1
+            used_sheet_names.add(sheet_title)
+
             df_class.to_excel(writer, sheet_title=sheet_title, index=False)
             worksheet = writer.sheets[sheet_title]
             worksheet.sheet_view.showGridLines = True
