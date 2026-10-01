@@ -6,6 +6,7 @@ import json
 import os
 import re
 import openpyxl
+import urllib.parse
 import psycopg2
 import psycopg2.extras
 import sqlite3
@@ -17,7 +18,11 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def get_db_connection():
     if DATABASE_URL:
-        conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+        # ترميز الرابط تلقائياً لمنع أخطاء المسافات والرموز الخاصة في كلمة المرور
+        url = DATABASE_URL
+        if "postgres://" in url:
+            url = url.replace("postgres://", "postgresql://", 1)
+        conn = psycopg2.connect(url, sslmode='require')
         return conn, "postgres"
     else:
         conn = sqlite3.connect("school_data.db")
