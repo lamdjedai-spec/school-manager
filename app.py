@@ -6,11 +6,123 @@ import json
 import os
 import re
 import openpyxl
+import sqlite3
 
 app = Flask(__name__)
 app.secret_key = "teacher_secret_key_2026"
 
-DATA_FILE = "data.json"
+DB_FILE = "school_data.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS config (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS students (
+            class_name TEXT,
+            student_id INTEGER PRIMARY KEY,
+            data TEXT
+        )
+    ''')
+    conn.commit()
+    
+    cursor.execute("SELECT value FROM config WHERE key = 'auth'")
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO config (key, value) VALUES (?, ?)", 
+                       ('auth', json.dumps({"username": "admin", "password": "123"})))
+    
+    cursor.execute("SELECT value FROM config WHERE key = 'teacher_info'")
+    if not cursor.fetchone():
+        default_teacher_info = {
+            "wilaya": "16 - الجزائر",
+            "school": "",
+            "season": "2025/2026",
+            "teacher_name": "",
+            "term": "الفصل الأول",
+            "sessions_count": 4,
+            "classes": []
+        }
+        cursor.execute("INSERT INTO config (key, value) VALUES (?, ?)", 
+                       ('teacher_info', json.dumps(default_teacher_info, ensure_ascii=False)))
+    conn.commit()
+    conn.close()
+
+init_db()
+
+def get_auth():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT value FROM config WHERE key = 'auth'")
+    row = cursor.fetchone()
+    conn.close()
+    return json.loads(row[0]) if row else {"username": "admin", "password": "123"}
+
+def save_auth(auth):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("REPLACE INTO config (key, value) VALUES ('auth', ?)", (json.dumps(auth),))
+    conn.commit()
+    conn.close()
+
+def get_teacher_info():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT value FROM config WHERE key = 'teacher_info'")
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return json.loads(row[0])
+    return {
+        "wilaya": "16 - الجزائر",
+        "school": "",
+        "season": "2025/2026",
+        "teacher_name": "",
+        "term": "الفصل الأول",
+        "sessions_count": 4,
+        "classes": []
+    }
+
+def save_teacher_info_db(info):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("REPLACE INTO config (key, value) VALUES ('teacher_info', ?)", (json.dumps(info, ensure_ascii=False),))
+    conn.commit()
+    conn.close()
+
+def get_students(class_name):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT data FROM students WHERE class_name = ?", (class_name,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [json.loads(r[0]) for r in rows]
+
+def save_student(class_name, student):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("REPLACE INTO students (class_name, student_id, data) VALUES (?, ?, ?)",
+                   (class_name, student["id"], json.dumps(student, ensure_ascii=False)))
+    conn.commit()
+    conn.close()
+
+def delete_student_db(class_name, student_id):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM students WHERE class_name = ? AND student_id = ?", (class_name, student_id))
+    conn.commit()
+    conn.close()
+
+def delete_class_db(class_name):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM students WHERE class_name = ?", (class_name,))
+    conn.commit()
+    conn.close()
 
 WILAYAS = [
     "01 - أدرار", "02 - الشلف", "03 - الأغواط", "04 - أم البواقي", "05 - باتنة", 
@@ -40,49 +152,6 @@ CRITERIA_INFO = {
 
 DEVOIR_MAP = {"A": 1.0, "B": 0.75, "C": 0.45, "D": 0.25}
 
-auth_credentials = {
-    "username": "admin",
-    "password": "123"
-}
-
-teacher_info = {
-    "wilaya": "16 - الجزائر",
-    "school": "",
-    "season": "2025/2026",
-    "teacher_name": "",
-    "term": "الفصل الأول",
-    "sessions_count": 4,
-    "classes": []
-}
-
-students_db = {}
-
-def load_data():
-    global auth_credentials, teacher_info, students_db
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, "r", encoding="utf-8") as f:
-                saved = json.load(f)
-                auth_credentials = saved.get("auth", auth_credentials)
-                teacher_info = saved.get("teacher_info", teacher_info)
-                students_db = saved.get("students_db", {})
-        except Exception:
-            pass
-
-def save_data():
-    data = {
-        "auth": auth_credentials,
-        "teacher_info": teacher_info,
-        "students_db": students_db
-    }
-    try:
-        with open(DATA_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
-    except Exception as e:
-        print(f"Error saving data: {e}")
-
-load_data()
-
 def process_student_grid(data, n_sessions):
     if not data:
         return [], {}
@@ -103,15 +172,11 @@ def process_student_grid(data, n_sessions):
         continuous_eval_list.append(eval_score)
         
         devoir_marks = row.get("devoir", [])
-        if len(devoir_marks) == n_sessions and all(m in DEVOIR_MAP for m in devoir_marks):
-            max_per_session = 20.0 / n_sessions
-            dev_score = round(sum(DEVOIR_MAP[m] * max_per_session for m in devoir_marks), 2)
-        else:
-            dev_score = 0.0  
-            
+        max_per_session = 20.0 / n_sessions
+        dev_score = round(sum(DEVOIR_MAP[m] * max_per_session for m in devoir_marks if m in DEVOIR_MAP), 2)
         devoir_total_list.append(dev_score)
         
-        exam_score = row.get("exam")
+        exam_score = row.get("exam", 0.0)
         if exam_score is not None:
             avg = round((((eval_score + dev_score) / 2.0) + (exam_score * 2.0)) / 3.0, 2)
             final_avg_list.append(avg)
@@ -515,6 +580,7 @@ CLASS_GRID_HTML = COMMON_CSS + """
 @app.route("/", methods=["GET", "POST"])
 def login():
     error = None
+    auth_credentials = get_auth()
     if request.method == "POST":
         if request.form.get("username") == auth_credentials["username"] and request.form.get("password") == auth_credentials["password"]:
             session["logged_in"] = True
@@ -532,7 +598,9 @@ def logout():
 def dashboard():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
-    return render_template_string(TEACHER_DASHBOARD_HTML, info=teacher_info, wilayas=WILAYAS, credentials=auth_credentials)
+    info = get_teacher_info()
+    credentials = get_auth()
+    return render_template_string(TEACHER_DASHBOARD_HTML, info=info, wilayas=WILAYAS, credentials=credentials)
 
 @app.route("/update_credentials", methods=["POST"])
 def update_credentials():
@@ -541,9 +609,8 @@ def update_credentials():
     new_user = request.form.get("new_username", "").strip()
     new_pass = request.form.get("new_password", "").strip()
     if new_user and new_pass:
-        auth_credentials["username"] = new_user
-        auth_credentials["password"] = new_pass
-        save_data()
+        auth_credentials = {"username": new_user, "password": new_pass}
+        save_auth(auth_credentials)
         flash("تم تحديث معلومات الحساب بنجاح!", "success")
     else:
         flash("يرجى ملء جميع الحقول!", "error")
@@ -553,16 +620,17 @@ def update_credentials():
 def save_teacher_info():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
-    teacher_info["wilaya"] = request.form.get("wilaya")
-    teacher_info["school"] = request.form.get("school")
-    teacher_info["season"] = request.form.get("season")
-    teacher_info["teacher_name"] = request.form.get("teacher_name")
-    teacher_info["term"] = request.form.get("term")
+    info = get_teacher_info()
+    info["wilaya"] = request.form.get("wilaya")
+    info["school"] = request.form.get("school")
+    info["season"] = request.form.get("season")
+    info["teacher_name"] = request.form.get("teacher_name")
+    info["term"] = request.form.get("term")
     try:
-        teacher_info["sessions_count"] = int(request.form.get("sessions_count", 4))
+        info["sessions_count"] = int(request.form.get("sessions_count", 4))
     except ValueError:
-        teacher_info["sessions_count"] = 4
-    save_data()
+        info["sessions_count"] = 4
+    save_teacher_info_db(info)
     flash("تم حفظ المعلومات العامة بنجاح!", "success")
     return redirect(url_for("dashboard"))
 
@@ -572,14 +640,13 @@ def add_class():
         return redirect(url_for("login"))
     c_name = request.form.get("class_name", "").strip()
     
-    if "classes" not in teacher_info:
-        teacher_info["classes"] = []
+    info = get_teacher_info()
+    if "classes" not in info:
+        info["classes"] = []
 
-    if c_name and c_name not in teacher_info["classes"]:
-        teacher_info["classes"].append(c_name)
-        if c_name not in students_db:
-            students_db[c_name] = []
-        save_data()
+    if c_name and c_name not in info["classes"]:
+        info["classes"].append(c_name)
+        save_teacher_info_db(info)
         flash(f"تم إضافة القسم '{c_name}' بنجاح!", "success")
     else:
         flash("اسم القسم فارغ أو موجود مسبقاً!", "error")
@@ -590,11 +657,11 @@ def add_class():
 def delete_class(class_name):
     if not session.get("logged_in"):
         return redirect(url_for("login"))
-    if class_name in teacher_info["classes"]:
-        teacher_info["classes"].remove(class_name)
-    if class_name in students_db:
-        del students_db[class_name]
-    save_data()
+    info = get_teacher_info()
+    if class_name in info["classes"]:
+        info["classes"].remove(class_name)
+        save_teacher_info_db(info)
+    delete_class_db(class_name)
     flash(f"تم حذف القسم '{class_name}' بنجاح!", "success")
     return redirect(url_for("dashboard"))
 
@@ -602,12 +669,13 @@ def delete_class(class_name):
 def class_view(class_name):
     if not session.get("logged_in"):
         return redirect(url_for("login"))
-    data = students_db.get(class_name, [])
-    processed_students, analytics = process_student_grid(data, teacher_info["sessions_count"])
+    info = get_teacher_info()
+    data = get_students(class_name)
+    processed_students, analytics = process_student_grid(data, info["sessions_count"])
     return render_template_string(
         CLASS_GRID_HTML,
         class_name=class_name,
-        info=teacher_info,
+        info=info,
         criteria=CRITERIA_INFO,
         students=processed_students,
         analytics=analytics
@@ -626,6 +694,7 @@ def add_student(class_name):
         pc = 1
     if surname and name:
         new_id = int(np.random.randint(100000, 999999))
+        info = get_teacher_info()
         student = {
             "id": new_id,
             "surname": surname,
@@ -633,13 +702,10 @@ def add_student(class_name):
             "gender": gender,
             "pc": pc,
             "deductions": {crit: 0 for crit in CRITERIA_INFO},
-            "devoir": [""] * teacher_info["sessions_count"],
-            "exam": 10.0
+            "devoir": [""] * info["sessions_count"],
+            "exam": 0.0
         }
-        if class_name not in students_db:
-            students_db[class_name] = []
-        students_db[class_name].append(student)
-        save_data()
+        save_student(class_name, student)
         flash("تم إضافة التلميذ بنجاح!", "success")
     return redirect(url_for("class_view", class_name=class_name))
 
@@ -651,6 +717,7 @@ def batch_add_students(class_name):
     if raw_data:
         lines = raw_data.split("\n")
         added_count = 0
+        info = get_teacher_info()
         for line in lines:
             parts = line.strip().split("\t")
             if len(parts) >= 2:
@@ -665,15 +732,12 @@ def batch_add_students(class_name):
                         "gender": "ذكر",
                         "pc": added_count + 1,
                         "deductions": {crit: 0 for crit in CRITERIA_INFO},
-                        "devoir": [""] * teacher_info["sessions_count"],
-                        "exam": 10.0
+                        "devoir": [""] * info["sessions_count"],
+                        "exam": 0.0
                     }
-                    if class_name not in students_db:
-                        students_db[class_name] = []
-                    students_db[class_name].append(student)
+                    save_student(class_name, student)
                     added_count += 1
         if added_count > 0:
-            save_data()
             flash(f"تم استيراد وإضافة {added_count} تلميذاً بنجاح!", "success")
         else:
             flash("تنسيق غير صالح. تأكد من لصق عمودين (اللقب ثم الاسم).", "error")
@@ -683,7 +747,7 @@ def batch_add_students(class_name):
 def edit_student(class_name, student_id):
     if not session.get("logged_in"):
         return redirect(url_for("login"))
-    students = students_db.get(class_name, [])
+    students = get_students(class_name)
     for st in students:
         if st["id"] == student_id:
             st["surname"] = request.form.get("surname", st["surname"]).strip()
@@ -693,7 +757,7 @@ def edit_student(class_name, student_id):
                 st["pc"] = int(request.form.get("pc", st["pc"]))
             except ValueError:
                 pass
-            save_data()
+            save_student(class_name, st)
             flash("تم تحديث بيانات التلميذ بنجاح!", "success")
             break
     return redirect(url_for("class_view", class_name=class_name))
@@ -702,9 +766,7 @@ def edit_student(class_name, student_id):
 def delete_student(class_name, student_id):
     if not session.get("logged_in"):
         return redirect(url_for("login"))
-    students = students_db.get(class_name, [])
-    students_db[class_name] = [st for st in students if st["id"] != student_id]
-    save_data()
+    delete_student_db(class_name, student_id)
     flash("تم حذف التلميذ بنجاح!", "success")
     return redirect(url_for("class_view", class_name=class_name))
 
@@ -712,13 +774,14 @@ def delete_student(class_name, student_id):
 def api_deduct(class_name, student_id, crit):
     if not session.get("logged_in"):
         return jsonify({"error": "Unauthorized"}), 401
-    students = students_db.get(class_name, [])
+    students = get_students(class_name)
     for st in students:
         if st["id"] == student_id:
             st["deductions"][crit] = st["deductions"].get(crit, 0) + 1
-            save_data()
+            save_student(class_name, st)
             break
-    processed_students, _ = process_student_grid(students, teacher_info["sessions_count"])
+    info = get_teacher_info()
+    processed_students, _ = process_student_grid(students, info["sessions_count"])
     target_st = next((st for st in processed_students if st["id"] == student_id), None)
     if target_st:
         return jsonify({
@@ -732,14 +795,15 @@ def api_deduct(class_name, student_id, crit):
 def api_restore(class_name, student_id, crit):
     if not session.get("logged_in"):
         return jsonify({"error": "Unauthorized"}), 401
-    students = students_db.get(class_name, [])
+    students = get_students(class_name)
     for st in students:
         if st["id"] == student_id:
             if st["deductions"].get(crit, 0) > 0:
                 st["deductions"][crit] -= 1
-                save_data()
+                save_student(class_name, st)
             break
-    processed_students, _ = process_student_grid(students, teacher_info["sessions_count"])
+    info = get_teacher_info()
+    processed_students, _ = process_student_grid(students, info["sessions_count"])
     target_st = next((st for st in processed_students if st["id"] == student_id), None)
     if target_st:
         return jsonify({
@@ -755,15 +819,16 @@ def api_devoir(class_name, student_id, session_idx, val):
         return jsonify({"error": "Unauthorized"}), 401
     if val != "" and val not in DEVOIR_MAP:
         return jsonify({"error": "Invalid value"}), 400
-    students = students_db.get(class_name, [])
+    students = get_students(class_name)
+    info = get_teacher_info()
     for st in students:
         if st["id"] == student_id:
             while len(st["devoir"]) <= session_idx:
                 st["devoir"].append("")
             st["devoir"][session_idx] = val
-            save_data()
+            save_student(class_name, st)
             break
-    processed_students, _ = process_student_grid(students, teacher_info["sessions_count"])
+    processed_students, _ = process_student_grid(students, info["sessions_count"])
     target_st = next((st for st in processed_students if st["id"] == student_id), None)
     if target_st:
         return jsonify({
@@ -779,14 +844,15 @@ def api_exam(class_name, student_id, val):
     try:
         f_val = float(val)
     except ValueError:
-        f_val = 10.0
-    students = students_db.get(class_name, [])
+        f_val = 0.0
+    students = get_students(class_name)
+    info = get_teacher_info()
     for st in students:
         if st["id"] == student_id:
             st["exam"] = f_val
-            save_data()
+            save_student(class_name, st)
             break
-    processed_students, _ = process_student_grid(students, teacher_info["sessions_count"])
+    processed_students, _ = process_student_grid(students, info["sessions_count"])
     target_st = next((st for st in processed_students if st["id"] == student_id), None)
     if target_st:
         return jsonify({"final_avg": target_st["final_avg"]})
@@ -800,7 +866,8 @@ def export_all_excel():
         wb = openpyxl.Workbook()
         default_sheet = wb.active
         
-        classes_list = teacher_info.get("classes", [])
+        info = get_teacher_info()
+        classes_list = info.get("classes", [])
         
         if not classes_list:
             default_sheet.title = "عام"
@@ -809,8 +876,8 @@ def export_all_excel():
             first_sheet = True
             used_sheet_names = set()
             for class_name in classes_list:
-                data = students_db.get(class_name, [])
-                processed_students, _ = process_student_grid(data, teacher_info["sessions_count"])
+                data = get_students(class_name)
+                processed_students, _ = process_student_grid(data, info["sessions_count"])
                 
                 rows = []
                 for idx, st in enumerate(processed_students, start=1):
@@ -823,7 +890,7 @@ def export_all_excel():
                         "رقم الجهاز": st.get("pc", 1),
                         "مجموع التقويم المستمر": st.get("continuous_eval", 0),
                         "مجموع الفرض": st.get("devoir_total", 0),
-                        "الاختبار": st.get("exam", 10.0),
+                        "الاختبار": st.get("exam", 0.0),
                         "المعدل النهائي": st["final_avg"] if st.get("final_avg") is not None else "--"
                     })
                 
