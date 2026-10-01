@@ -6,34 +6,62 @@ import json
 import os
 import re
 import openpyxl
+import psycopg2
+import psycopg2.extras
 import sqlite3
 
 app = Flask(__name__)
 app.secret_key = "teacher_secret_key_2026"
 
-DB_FILE = "school_data.db"
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+def get_db_connection():
+    if DATABASE_URL:
+        conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+        return conn, "postgres"
+    else:
+        conn = sqlite3.connect("school_data.db")
+        conn.row_factory = sqlite3.Row
+        return conn, "sqlite"
 
 def init_db():
-    conn = sqlite3.connect(DB_FILE)
+    conn, db_type = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS config (
-            key TEXT PRIMARY KEY,
-            value TEXT
-        )
-    ''')
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS students (
-            class_name TEXT,
-            student_id INTEGER PRIMARY KEY,
-            data TEXT
-        )
-    ''')
+    
+    if db_type == "postgres":
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS config (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS students (
+                class_name TEXT,
+                student_id BIGINT,
+                data TEXT,
+                PRIMARY KEY (class_name, student_id)
+            )
+        ''')
+    else:
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS config (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS students (
+                class_name TEXT,
+                student_id INTEGER PRIMARY KEY,
+                data TEXT
+            )
+        ''')
     conn.commit()
     
     cursor.execute("SELECT value FROM config WHERE key = 'auth'")
     if not cursor.fetchone():
-        cursor.execute("INSERT INTO config (key, value) VALUES (?, ?)", 
+        cursor.execute("INSERT INTO config (key, value) VALUES (%s, %s) ON CONFLICT (key) DO NOTHING" if db_type=="postgres" else "INSERT OR IGNORE INTO config (key, value) VALUES (?, ?)", 
                        ('auth', json.dumps({"username": "admin", "password": "123"})))
     
     cursor.execute("SELECT value FROM config WHERE key = 'teacher_info'")
@@ -47,33 +75,40 @@ def init_db():
             "sessions_count": 4,
             "classes": []
         }
-        cursor.execute("INSERT INTO config (key, value) VALUES (?, ?)", 
+        cursor.execute("INSERT INTO config (key, value) VALUES (%s, %s) ON CONFLICT (key) DO NOTHING" if db_type=="postgres" else "INSERT OR IGNORE INTO config (key, value) VALUES (?, ?)", 
                        ('teacher_info', json.dumps(default_teacher_info, ensure_ascii=False)))
     conn.commit()
+    cursor.close()
     conn.close()
 
 init_db()
 
 def get_auth():
-    conn = sqlite3.connect(DB_FILE)
+    conn, db_type = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT value FROM config WHERE key = 'auth'")
+    cursor.execute("SELECT value FROM config WHERE key = %s" if db_type=="postgres" else "SELECT value FROM config WHERE key = ?", ('auth',))
     row = cursor.fetchone()
+    cursor.close()
     conn.close()
     return json.loads(row[0]) if row else {"username": "admin", "password": "123"}
 
 def save_auth(auth):
-    conn = sqlite3.connect(DB_FILE)
+    conn, db_type = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("REPLACE INTO config (key, value) VALUES ('auth', ?)", (json.dumps(auth),))
+    if db_type == "postgres":
+        cursor.execute("INSERT INTO config (key, value) VALUES ('auth', %s) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", (json.dumps(auth),))
+    else:
+        cursor.execute("REPLACE INTO config (key, value) VALUES ('auth', ?)", (json.dumps(auth),))
     conn.commit()
+    cursor.close()
     conn.close()
 
 def get_teacher_info():
-    conn = sqlite3.connect(DB_FILE)
+    conn, db_type = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT value FROM config WHERE key = 'teacher_info'")
+    cursor.execute("SELECT value FROM config WHERE key = %s" if db_type=="postgres" else "SELECT value FROM config WHERE key = ?", ('teacher_info',))
     row = cursor.fetchone()
+    cursor.close()
     conn.close()
     if row:
         return json.loads(row[0])
@@ -88,40 +123,52 @@ def get_teacher_info():
     }
 
 def save_teacher_info_db(info):
-    conn = sqlite3.connect(DB_FILE)
+    conn, db_type = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("REPLACE INTO config (key, value) VALUES ('teacher_info', ?)", (json.dumps(info, ensure_ascii=False),))
+    if db_type == "postgres":
+        cursor.execute("INSERT INTO config (key, value) VALUES ('teacher_info', %s) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", (json.dumps(info, ensure_ascii=False),))
+    else:
+        cursor.execute("REPLACE INTO config (key, value) VALUES ('teacher_info', ?)", (json.dumps(info, ensure_ascii=False),))
     conn.commit()
+    cursor.close()
     conn.close()
 
 def get_students(class_name):
-    conn = sqlite3.connect(DB_FILE)
+    conn, db_type = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT data FROM students WHERE class_name = ?", (class_name,))
+    cursor.execute("SELECT data FROM students WHERE class_name = %s" if db_type=="postgres" else "SELECT data FROM students WHERE class_name = ?", (class_name,))
     rows = cursor.fetchall()
+    cursor.close()
     conn.close()
     return [json.loads(r[0]) for r in rows]
 
 def save_student(class_name, student):
-    conn = sqlite3.connect(DB_FILE)
+    conn, db_type = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("REPLACE INTO students (class_name, student_id, data) VALUES (?, ?, ?)",
-                   (class_name, student["id"], json.dumps(student, ensure_ascii=False)))
+    if db_type == "postgres":
+        cursor.execute("INSERT INTO students (class_name, student_id, data) VALUES (%s, %s, %s) ON CONFLICT (class_name, student_id) DO UPDATE SET data = EXCLUDED.data",
+                       (class_name, student["id"], json.dumps(student, ensure_ascii=False)))
+    else:
+        cursor.execute("REPLACE INTO students (class_name, student_id, data) VALUES (?, ?, ?)",
+                       (class_name, student["id"], json.dumps(student, ensure_ascii=False)))
     conn.commit()
+    cursor.close()
     conn.close()
 
 def delete_student_db(class_name, student_id):
-    conn = sqlite3.connect(DB_FILE)
+    conn, db_type = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM students WHERE class_name = ? AND student_id = ?", (class_name, student_id))
+    cursor.execute("DELETE FROM students WHERE class_name = %s AND student_id = %s" if db_type=="postgres" else "DELETE FROM students WHERE class_name = ? AND student_id = ?", (class_name, student_id))
     conn.commit()
+    cursor.close()
     conn.close()
 
 def delete_class_db(class_name):
-    conn = sqlite3.connect(DB_FILE)
+    conn, db_type = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM students WHERE class_name = ?", (class_name,))
+    cursor.execute("DELETE FROM students WHERE class_name = %s" if db_type=="postgres" else "DELETE FROM students WHERE class_name = ?", (class_name,))
     conn.commit()
+    cursor.close()
     conn.close()
 
 WILAYAS = [
