@@ -498,7 +498,7 @@ CLASS_GRID_HTML = COMMON_CSS + """
                         {% for s in range(info.sessions_count) %}
                         <td>
                             <select onchange="updateDevoir('{{ class_name }}', {{ st.id }}, {{ s }}, this.value)">
-                                <option value="" {% if not st.devoir or st.devoir[s] == "" %}selected{% endif %}>--</option>
+                                <option value="" {% if not st.devoir or st.devoir|length <= s or st.devoir[s] == "" %}selected{% endif %}>--</option>
                                 {% for opt in ['A', 'B', 'C', 'D'] %}
                                     <option value="{{ opt }}" {% if st.devoir and st.devoir|length > s and st.devoir[s] == opt %}selected{% endif %}>{{ opt }}</option>
                                 {% endfor %}
@@ -557,7 +557,7 @@ CLASS_GRID_HTML = COMMON_CSS + """
         }
 
         function updateDevoir(className, studentId, sessionIdx, val) {
-            fetch(`/api/devoir/${className}/${studentId}/${sessionIdx}/${val}`)
+            fetch(`/api/devoir/${className}/${studentId}/${sessionIdx}?val=` + encodeURIComponent(val))
                 .then(r => r.json())
                 .then(data => {
                     document.getElementById(`devtotal-${studentId}`).innerText = data.devoir_total;
@@ -813,16 +813,19 @@ def api_restore(class_name, student_id, crit):
         })
     return jsonify({"error": "Not found"}), 404
 
-@app.route("/api/devoir/<class_name>/<int:student_id>/<int:session_idx>/<val>")
-def api_devoir(class_name, student_id, session_idx, val):
+@app.route("/api/devoir/<class_name>/<int:student_id>/<int:session_idx>")
+def api_devoir(class_name, student_id, session_idx):
     if not session.get("logged_in"):
         return jsonify({"error": "Unauthorized"}), 401
+    val = request.args.get("val", "")
     if val != "" and val not in DEVOIR_MAP:
         return jsonify({"error": "Invalid value"}), 400
     students = get_students(class_name)
     info = get_teacher_info()
     for st in students:
         if st["id"] == student_id:
+            if "devoir" not in st:
+                st["devoir"] = []
             while len(st["devoir"]) <= session_idx:
                 st["devoir"].append("")
             st["devoir"][session_idx] = val
